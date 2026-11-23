@@ -88,7 +88,11 @@ table.t td{padding:8px 6px;border-top:1px solid var(--ln)}
  .side .logo{height:44px;flex:0 0 44px;display:flex;align-items:center;color:#fff;font-size:26px;font-weight:700;padding:0 12px}
  .side .logo em{font-style:normal;color:var(--amb)}
  .side button{height:44px;flex:0 0 44px;display:flex;align-items:center;text-align:left;margin:0 -12px;padding:0 24px;border:none;border-left:4px solid transparent;border-radius:0;background:transparent;color:var(--lt);font-size:15px;cursor:pointer}
- .side button:hover{color:#fff}
+ .side button{transition:background .15s,padding .15s,color .15s}
+ .side button:hover{background:rgba(255,255,255,.14);border-left-color:rgba(242,193,78,.6);color:#fff;font-weight:600;padding-left:30px}
+ .side button.on:hover{background:rgba(0,0,0,.36);padding-left:24px;color:var(--amb)}
+ .side button:focus-visible{outline:2px solid var(--amb);outline-offset:-2px}
+ .side .gap{cursor:default;user-select:none}
  .side button.on{background:rgba(0,0,0,.3);border-left-color:var(--amb);color:var(--amb);font-weight:700}
  .side .gap{height:44px;flex:0 0 44px;display:flex;align-items:flex-end;padding:0 12px 7px;font-size:12px;font-weight:700;letter-spacing:.5px;color:#9FC2AC}
  .wrapc{flex:1;min-width:0}
