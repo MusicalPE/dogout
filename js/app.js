@@ -613,7 +613,8 @@ G_.teams = () => {
 G_.recovery = () => gateWrap(`<section class="card"><h2>복구 코드를 꼭 적어 두세요</h2>
  <p class="muted" style="margin:0;font-size:15px;line-height:1.7">팀 비밀번호를 잊었을 때 이 코드로만 학생 명단을 열 수 있어요. 지금 한 번만 보여 드려요. 종이에 적거나 사진을 찍어 안전한 곳에 두세요.</p>
  <div class="board" style="align-items:center"><span class="num" style="font-size:30px;letter-spacing:2px;color:var(--amb)" id="rcode">${esc(ui.rcode)}</span></div>
- <button type="button" class="btn" data-act="copyR">복사</button>
+ <div class="btns"><a class="btn p" id="mailR" href="${recoveryMailHref()}" target="_blank" rel="noopener">${USER && USER.email ? '내 지메일로 보내기' : '메일로 보내기'}</a><button type="button" class="btn" data-act="copyR">복사</button></div>
+ <p class="muted" style="margin:0">${USER && USER.email ? esc(USER.email) + ' 앞으로 쓰는 메일 창이 열려요. 보내기를 눌러야 전송됩니다.' : '메일 창이 열리면 받는 사람에 내 메일 주소를 넣어 보내세요.'} 이 메일은 다른 사람에게 전달하지 마세요.</p>
  <label class="f" style="flex-direction:row;align-items:center;gap:8px;font-size:15px;color:var(--ink)"><input type="checkbox" id="rok" style="width:22px;height:22px"> 안전한 곳에 적어 두었어요</label>
  <button type="button" class="btn p" data-act="rDone">다음</button></section>`);
 G_.unlock = () => gateWrap(`<section class="card"><h2>${esc(TEAM ? TEAM.name : '')} 열기</h2>
@@ -629,6 +630,15 @@ G_.notice = () => {
  ${ns.map((n, i) => `<section class="card">${i === 0 ? pill('새 공지', 'c') : ''}<div class="hrow"><h2 style="font-size:18px">${esc(n.title)}</h2><span class="muted">${md(n.date)}</span></div><div style="white-space:pre-line;font-size:15px;line-height:1.7">${esc(n.body)}</div>${n.items ? `<div class="ok"><b>준비물</b><br>${esc(n.items)}</div>` : ''}</section>`).join('') || '<section class="card"><div class="empty">아직 공지가 없어요</div></section>'}
  <p class="muted" style="text-align:center">더그아웃! · 만든 사람 음악적체육인</p></div>`;
 };
+function recoveryMailHref() {
+  const name = (TEAM && TEAM.name) || (S && S.team && S.team.name) || '우리 팀';
+  const to = (USER && USER.email) || '';
+  const su = `[더그아웃!] ${name} 복구 코드`;
+  const body = `${name} 복구 코드\n\n${ui.rcode}\n\n만든 날: ${today()}\n앱 주소: ${location.origin + location.pathname}\n\n팀 비밀번호를 잊었을 때, 팀을 열 때 나오는 "팀 비밀번호 또는 복구 코드" 칸에 이 코드를 넣으면 학생 명단을 열 수 있어요.\n복구 코드를 새로 만들면 이 코드는 더 쓸 수 없어요.\n\n이 메일은 다른 사람에게 전달하지 마세요.`;
+  const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (mobile || !to) return 'mailto:' + encodeURIComponent(to) + '?subject=' + encodeURIComponent(su) + '&body=' + encodeURIComponent(body);
+  return 'https://mail.google.com/mail/?view=cm&fs=1&authuser=' + encodeURIComponent(to) + '&to=' + encodeURIComponent(to) + '&su=' + encodeURIComponent(su) + '&body=' + encodeURIComponent(body);
+}
 function renderGate() {
   document.body.classList.add('bare');
   document.getElementById('view').innerHTML = (G_[ui.screen] || G_.loading)();
