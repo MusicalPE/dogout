@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#123D27">
+<title>더그아웃! Dugout</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{--g:#1F5C3A;--dg:#123D27;--amb:#F2C14E;--c:#B23A2B;--ink:#15202E;--mu:#5B6470;--ln:#DDD6C2;--bg:#EFEBDD;--gt:#E1EEDF;--ct:#F5E2D9;--lt:#CFE3D5;
+--str:repeating-linear-gradient(90deg,#123D27 0 28px,#17482F 28px 56px)}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:'IBM Plex Sans KR',system-ui,sans-serif;-webkit-text-size-adjust:100%}
+button,input,select,textarea{font-family:inherit;font-size:15px;color:var(--ink)}
+a{color:var(--g)}
+.num{font-family:'Barlow Condensed',sans-serif;font-weight:700}
+#app{min-height:100vh}
+.side{display:none}
+.top{background:var(--str);color:#fff;border-bottom:4px solid #fff;padding:16px 18px 12px;position:sticky;top:0;z-index:5}
+.top .team{font-size:13px;font-weight:600;color:var(--lt)}
+.top h1{margin:2px 0 0;font-size:23px;letter-spacing:-.5px}
+.top h1 em{font-style:normal;color:var(--amb)}
+main{padding:14px 14px 96px;max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+.bnav{position:fixed;left:0;right:0;bottom:0;height:68px;background:var(--dg);display:flex;z-index:6;padding-bottom:env(safe-area-inset-bottom)}
+.bnav button{flex:1;background:none;border:none;border-top:3px solid transparent;color:var(--lt);font-size:15px;font-weight:500;cursor:pointer}
+.bnav button.on{color:var(--amb);border-top-color:var(--amb);font-weight:700}
+.card{background:#fff;border:1px solid var(--ln);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.card h2{margin:0;font-size:16px}
+.hrow{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.muted{color:var(--mu);font-size:13px}
+.pill{display:inline-block;font-size:12px;font-weight:700;padding:4px 9px;border-radius:999px;white-space:nowrap}
+.pg{color:var(--g);background:var(--gt)}.pc{color:var(--c);background:var(--ct)}.pn{color:var(--mu);background:#EEECE5}.pa{color:var(--dg);background:var(--amb)}
+.btn{min-height:46px;border-radius:12px;border:1px solid var(--ln);background:#fff;font-weight:700;padding:0 14px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn.p{background:var(--g);border-color:var(--g);color:#fff}
+.btn.d{color:var(--c)}
+.btn.s{min-height:38px;font-size:14px;padding:0 11px;border-radius:10px}
+.btns{display:flex;gap:8px;flex-wrap:wrap}.btns .btn{flex:1}
+.list>div{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--ln)}
+.list>div:first-child{border-top:none}
+.t15{font-size:15px;font-weight:600}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;color:var(--mu)}
+input[type=text],input[type=password],input[type=date],input[type=time],input[type=number],select,textarea{border:1px solid var(--ln);border-radius:10px;padding:10px;background:#fff;min-height:44px;width:100%}
+textarea{min-height:90px;line-height:1.6;resize:vertical}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{min-height:38px;padding:0 13px;border-radius:999px;border:1px solid var(--ln);background:#fff;font-size:14px;cursor:pointer}
+.chip.on{background:var(--g);border-color:var(--g);color:#fff;font-weight:700}
+.board{background:var(--dg);color:#fff;border:3px solid #fff;box-shadow:0 0 0 1px var(--dg);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:8px}
+.board .muted{color:var(--lt)}
+.cnt{width:64px;text-align:center;background:var(--dg);color:var(--amb);border-radius:8px;padding:6px 0;font-size:36px;line-height:1}
+.pm{width:46px;height:46px;border-radius:12px;border:1px solid var(--ln);background:#fff;font-size:22px;cursor:pointer}
+.pp{width:58px;height:58px;border-radius:14px;border:none;background:var(--g);color:#fff;font-size:28px;cursor:pointer}
+.prow{display:flex;align-items:center;gap:10px;padding:12px 0;border-top:1px solid var(--ln)}
+.prow:first-of-type{border-top:none}
+.resb{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.resb button{min-height:46px;border-radius:10px;border:1px solid var(--ln);background:#fff;font-weight:700;cursor:pointer}
+.resb button.h{color:var(--g);background:var(--gt);border-color:#C5DDC6}
+.field{position:relative;border-radius:14px;background:repeating-linear-gradient(0deg,#2F7A4A 0 24px,#2A7043 24px 48px);border:3px solid #fff;box-shadow:0 0 0 1px var(--ln);height:300px;overflow:hidden}
+.field .dia{position:absolute;left:50%;top:128px;width:120px;height:120px;margin-left:-60px;background:#C98A5B;transform:rotate(45deg);border:3px solid #fff}
+.field .pos{position:absolute;width:80px;transform:translateX(-50%);background:#fff;border-radius:10px;padding:4px 0;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.field .pos b{display:block;font-size:12px;color:var(--c)}
+.field .pos span{font-size:13px;font-weight:700}
+table.t{width:100%;border-collapse:collapse;font-size:14px}
+table.t th{text-align:left;color:var(--mu);font-weight:600;font-size:13px;padding:6px}
+table.t td{padding:8px 6px;border-top:1px solid var(--ln)}
+.tw{overflow-x:auto}
+.score{width:100%;border-collapse:collapse;text-align:center}
+.score th{color:var(--lt);font-size:13px;font-weight:600;padding:6px 2px}
+.score td{padding:6px 2px}
+.score input{width:100%;min-height:38px;padding:4px;text-align:center;background:transparent;border:1px solid rgba(255,255,255,.3);color:var(--amb);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:22px;border-radius:6px}
+.score .tot{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:26px;color:#fff;border-left:2px solid rgba(255,255,255,.35)}
+.warn{background:var(--ct);color:#7A2318;border-radius:12px;padding:12px 14px;font-size:14px;line-height:1.6}
+.ok{background:var(--gt);color:#174A2E;border-radius:12px;padding:12px 14px;font-size:14px;line-height:1.6}
+.toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;z-index:20;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+.bars{display:flex;gap:8px;align-items:flex-end;height:160px}
+.bars>div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;height:100%}
+.empty{color:var(--mu);font-size:14px;padding:6px 0}
+.dash{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px}
+.dash>*{grid-column:span 12}
+#print{display:none}
+@media (min-width:1000px){
+ #app{display:flex}
+ .side{display:flex;flex-direction:column;gap:0;width:230px;flex:0 0 230px;background:repeating-linear-gradient(180deg,#123D27 0 44px,#17482F 44px 88px);background-attachment:local;border-right:4px solid #fff;padding:0 12px;position:sticky;top:0;height:100vh;overflow-y:auto}
+ .side .team{height:44px;flex:0 0 44px;display:flex;align-items:center;color:var(--lt);font-size:13px;font-weight:600;padding:0 12px}
+ .side .logo{height:44px;flex:0 0 44px;display:flex;align-items:center;color:#fff;font-size:26px;font-weight:700;padding:0 12px}
+ .side .logo em{font-style:normal;color:var(--amb)}
+ .side button{height:44px;flex:0 0 44px;display:flex;align-items:center;text-align:left;margin:0 -12px;padding:0 24px;border:none;border-left:4px solid transparent;border-radius:0;background:transparent;color:var(--lt);font-size:15px;cursor:pointer}
+ .side button:hover{color:#fff}
+ .side button.on{background:rgba(0,0,0,.3);border-left-color:var(--amb);color:var(--amb);font-weight:700}
+ .side .gap{height:44px;flex:0 0 44px}
+ .wrapc{flex:1;min-width:0}
+ .top{position:static;background:none;color:var(--ink);border:none;padding:24px 26px 4px;max-width:1240px;margin:0 auto}
+ .top .team{color:var(--mu)}
+ .top h1 em{color:var(--c)}
+ main{padding:14px 26px 40px}
+ .bnav{display:none}
+ .toast{bottom:30px}
+ .s4{grid-column:span 4}.s5{grid-column:span 5}.s6{grid-column:span 6}.s7{grid-column:span 7}.s8{grid-column:span 8}.s3{grid-column:span 3}
+ .cols2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
+}
+@media print{
+ #app,.toast{display:none!important}
+ #print{display:block;font-family:'IBM Plex Sans KR',sans-serif;color:#000;padding:10mm}
+ #print table{width:100%;border-collapse:collapse}
+ #print td,#print th{border:1px solid #000;padding:6px 8px;font-size:12pt}
+}
+
+body.bare .side,body.bare .bnav,body.bare .top{display:none!important}
+body.bare #app{display:block}
+body.bare main{padding:0}
+.gate{max-width:560px;margin:0 auto;padding:28px 16px 40px;display:flex;flex-direction:column;gap:12px}
+.gate-logo{font-size:40px;font-weight:700;letter-spacing:-1px;text-align:center;margin-top:10px}
+.gate-logo em{font-style:normal;color:var(--c)}
+.gate-sub{text-align:center;color:var(--mu);font-size:14px;margin-top:-8px;margin-bottom:6px}
+.pubhead{background:var(--str);color:#fff;border-bottom:4px solid #fff;border-radius:14px;padding:18px}
+.chip input{accent-color:var(--g)}
+#sync{font-size:12px;font-weight:600;color:var(--lt);margin-left:8px;white-space:nowrap}
+#sync[data-state^="저장 안 됨"]{color:var(--amb)}
+@media (min-width:1000px){#sync{color:var(--mu)} #sync[data-state^="저장 안 됨"]{color:var(--c)}}
+.chip:disabled{opacity:.55;cursor:not-allowed}
+</style>
+</head>
+<body class="bare">
+<div id="app">
+ <nav class="side" id="side" aria-label="메뉴"></nav>
+ <div class="wrapc">
+  <header class="top"><div class="team"><span id="teamName"></span><span id="sync"></span></div><h1 id="pageTitle"></h1></header>
+  <main id="view"><div class="gate"><div class="gate-logo">더그아웃<em>!</em></div><div class="gate-sub">불러오는 중…</div></div></main>
+ </div>
+ <nav class="bnav" id="bnav" aria-label="주 메뉴"></nav>
+</div>
+<div id="print"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<input type="file" id="importFile" accept=".json,application/json" hidden>
+<noscript>자바스크립트를 켜야 쓸 수 있어요.</noscript>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
