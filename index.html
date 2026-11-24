@@ -126,6 +126,13 @@ body.bare main{padding:0}
 #sync[data-state^="저장 안 됨"]{color:var(--amb)}
 @media (min-width:1000px){#sync{color:var(--mu)} #sync[data-state^="저장 안 됨"]{color:var(--c)}}
 .chip:disabled{opacity:.55;cursor:not-allowed}
+.gate .cols2{display:flex;flex-direction:column;gap:12px}
+.wzhead{gap:8px}
+.wzbar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.wzbar span{height:8px;border-radius:4px;background:#E4DECB}
+.wzbar span.d{background:var(--g)}
+.wzbar span.c{background:var(--amb)}
+.wzskip{align-self:center;background:none!important;border:none!important;color:var(--mu);text-decoration:underline}
 </style>
 </head>
 <body class="bare">

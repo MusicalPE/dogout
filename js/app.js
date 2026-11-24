@@ -601,16 +601,10 @@ G_.teams = () => {
   const ts = ui.teams || [];
   return gateWrap(`<section class="card"><div class="hrow"><h2>내 팀</h2>${store.mode === 'firebase' ? `<span class="muted">${esc(USER.email)} <button type="button" class="btn s" data-act="signOut">로그아웃</button></span>` : ''}</div>
  <div class="list">${ts.map(t => `<div><div><div class="t15">${esc(t.name)}</div><div class="muted">${esc((LEVELS[t.level] || {}).label || '')} · ${t.role === 'owner' ? '감독' : '코치'}</div></div><button type="button" class="btn s p" data-act="openTeam" data-id="${t.id}">열기</button></div>`).join('') || '<div class="empty">아직 팀이 없어요. 새 팀을 만들거나 초대 코드로 들어오세요.</div>'}</div></section>
- <section class="card"><h2>새 팀 만들기 (감독)</h2><form data-form="createTeam" style="display:flex;flex-direction:column;gap:10px">
- <label class="f">팀 이름<input type="text" name="name" required placeholder="예: 햇살초 야구부" maxlength="40"></label>
- <div class="f">학교급</div><div class="chips">${Object.entries(LEVELS).map(([k, v], i) => `<label class="chip ${i === 0 ? 'on' : ''}"><input type="radio" name="level" value="${k}" ${i === 0 ? 'checked' : ''} data-chg="radioChip" style="position:absolute;opacity:0;width:1px;height:1px">${v.label}</label>`).join('')}</div>
- <label class="f">팀 비밀번호 (8자 이상)<input type="password" name="pass" required minlength="8" autocomplete="new-password"></label>
- <label class="f">팀 비밀번호 한 번 더<input type="password" name="pass2" required minlength="8" autocomplete="new-password"></label>
- <p class="muted" style="margin:0;line-height:1.6">팀 비밀번호로 학생 명단을 잠가요. 코치 선생님께는 초대 코드와 함께 따로 알려 주세요. 비밀번호는 서버에 저장하지 않아서, 잊으면 복구 코드로만 열 수 있어요.</p>
- <button class="btn p">팀 만들기</button></form></section>
+ <section class="card"><h2>새 팀 만들기 (감독)</h2><p class="muted" style="margin:0;font-size:15px;line-height:1.7">첫 설정 도우미가 팀 만들기부터 선수 명단, 코치 초대, 학부모 공지판까지 차례로 안내해 드려요. 5분이면 끝나요.</p><button type="button" class="btn p" data-act="wzStart">첫 설정 도우미로 팀 만들기</button></section>
  <section class="card"><h2>초대 코드로 들어가기 (코치)</h2><form data-form="join" class="btns" style="align-items:flex-end"><label class="f" style="flex:2">초대 코드<input type="text" name="code" required placeholder="8자리" maxlength="12" style="text-transform:uppercase"></label><button class="btn p">들어가기</button></form></section>`);
 };
-G_.recovery = () => gateWrap(`<section class="card"><h2>복구 코드를 꼭 적어 두세요</h2>
+G_.recovery = () => gateWrap((ui.wz ? wzBar(3) : '') + `<section class="card"><h2>복구 코드를 꼭 적어 두세요</h2>
  <p class="muted" style="margin:0;font-size:15px;line-height:1.7">팀 비밀번호를 잊었을 때 이 코드로만 학생 명단을 열 수 있어요. 지금 한 번만 보여 드려요. 종이에 적거나 사진을 찍어 안전한 곳에 두세요.</p>
  <div class="board" style="align-items:center"><span class="num" style="font-size:30px;letter-spacing:2px;color:var(--amb)" id="rcode">${esc(ui.rcode)}</span></div>
  <div class="btns"><a class="btn p" id="mailR" href="${recoveryMailHref()}" target="_blank" rel="noopener">${USER && USER.email ? '내 지메일로 보내기' : '메일로 보내기'}</a><button type="button" class="btn" data-act="copyR">복사</button></div>
@@ -642,6 +636,7 @@ function recoveryMailHref() {
 function renderGate() {
   document.body.classList.add('bare');
   document.getElementById('view').innerHTML = (G_[ui.screen] || G_.loading)();
+  if (ui.confirm) { const g = document.querySelector('#view .gate'); if (g) { g.insertAdjacentHTML('afterbegin', `<div class="warn">${esc(ui.confirm.msg)}<div class="btns" style="margin-top:8px"><button type="button" class="btn s" data-act="confirmNo">취소</button><button type="button" class="btn s d" data-act="confirmYes">네, 진행</button></div></div>`); window.scrollTo(0, 0); } }
 }
 
 async function showTeams() {
@@ -665,7 +660,8 @@ async function enterApp() {
   try { await loadTeamData(); } catch (e) { toast('기록을 불러오지 못했어요: ' + (e.message || e)); ui.screen = 'teams'; return render(); }
   try { localStorage.setItem('dugout-last', teamId); } catch (e) { }
   startWatch();
-  ui.screen = 'app'; ui.page = 'home'; render(); setSync('저장됨');
+  if (isOwner() && !TEAM.setupDone) { ui.wz = { step: Math.max(4, (ui.wz && ui.wz.step) || 4) }; ui.screen = 'wizard'; render(); setSync('저장됨'); return; }
+  ui.wz = null; ui.screen = 'app'; ui.page = 'home'; render(); setSync('저장됨');
 }
 
 /* ---------- 처음 화면 동작 ---------- */
@@ -721,7 +717,7 @@ Object.assign(F, {
       teamId = id; const check = await seal(key, { ok: 'dugout' }, team_id_check());
       await store.updateTeam(id, { check });
       TEAM = await store.getTeam(id); KEYC = key; await rememberKey(USER.uid + '|' + id, key);
-      ui.rcode = rcode; ui.afterR = () => enterApp().then(() => { if (!S.players.length) go('roster'); });
+      ui.rcode = rcode; ui.afterR = () => enterApp();
       ui.screen = 'recovery'; render();
     } catch (e) { toast('팀을 만들지 못했어요: ' + (e.message || e)); ui.screen = 'teams'; render(); }
   },
@@ -757,6 +753,95 @@ Object.assign(C, {
   dayMax: el => { CFG().dayMax = Number(el.value) || 0; save(); }
 });
 
+function rulesCard() {
+  const rs = CFG().rules;
+  return `<section class="card"><h2>투구 수 휴식 기준 · ${LV().label}</h2>${CFG().rulesOk ? '<div class="ok">감독님이 확인한 기준으로 계산하고 있어요.</div>' : '<div class="warn">아래 숫자는 예시예요. 올해 협회 규정을 확인해서 고친 뒤 "기준 확인함"을 눌러 주세요.</div>'}
+ <div class="list">${rs.map((r, i) => `<div><span class="t15">${r.max == null ? '그 이상' : '~ <input type="number" min="1" aria-label="구간 ' + (i + 1) + ' 최대 투구 수" data-chg="rule" data-i="' + i + '" data-k="max" value="' + esc(r.max) + '" style="width:80px;display:inline-block;min-height:38px"> 구까지'}</span><span>휴식 <input type="number" min="0" aria-label="구간 ${i + 1} 휴식일" data-chg="rule" data-i="${i}" data-k="days" value="${esc(r.days)}" style="width:70px;display:inline-block;min-height:38px"> 일</span></div>`).join('')}</div>
+ <label class="f">하루 최대 투구 수<input type="number" min="1" data-chg="dayMax" value="${esc(CFG().dayMax)}"></label>
+ <button type="button" class="btn ${CFG().rulesOk ? '' : 'p'}" data-act="rulesOk">${CFG().rulesOk ? '기준 다시 예시 상태로 표시' : '기준 확인함'}</button></section>`;
+}
+
+/* ================= 첫 설정 도우미 ================= */
+const WZ = ['팀 정보', '팀 비밀번호', '복구 코드', '선수 명단', '투구 수 기준', '코치 초대', '학부모 공지판'];
+function wzBar(step) {
+  return `<section class="card wzhead"><div class="wzbar" aria-hidden="true">${WZ.map((t, i) => `<span class="${i + 1 < step ? 'd' : i + 1 === step ? 'c' : ''}"></span>`).join('')}</div>
+ <div class="hrow"><b>${step <= WZ.length ? step + ' / ' + WZ.length + ' · ' + WZ[step - 1] : '준비 끝'}</b><span class="muted">첫 설정 도우미</span></div></section>`;
+}
+function wzNav(step, opt = {}) {
+  return `<div class="btns">${opt.noPrev ? '' : `<button type="button" class="btn" data-act="wzPrev">이전</button>`}${opt.next === false ? '' : `<button type="button" class="btn p" data-act="wzNext">${opt.nextLabel || '다음'}</button>`}</div>
+ ${step >= 4 ? '<button type="button" class="btn s wzskip" data-act="wzFinish">나머지는 나중에 하기</button>' : ''}`;
+}
+G_.wizard = () => {
+  const w = ui.wz || (ui.wz = { step: 1 }); const st = w.step;
+  let h = wzBar(st);
+  if (st === 1) {
+    h += `<section class="card"><h2>어떤 팀인가요?</h2><p class="muted" style="margin:0;font-size:15px;line-height:1.7">팀 이름은 학부모 공지판에도 보여요. 학교급을 고르면 학년 범위, 기본 이닝 수, 투구 수 기준표가 맞춰집니다.</p>
+ <form data-form="wz1" style="display:flex;flex-direction:column;gap:10px"><label class="f">팀 이름<input type="text" name="name" required placeholder="예: 햇살초 야구부" maxlength="40" value="${esc(w.name || '')}"></label>
+ <div class="f">학교급</div><div class="chips">${Object.entries(LEVELS).map(([k, v]) => `<label class="chip ${(w.level || '초') === k ? 'on' : ''}"><input type="radio" name="level" value="${k}" ${(w.level || '초') === k ? 'checked' : ''} data-chg="radioChip" style="position:absolute;opacity:0;width:1px;height:1px">${v.label}</label>`).join('')}</div>
+ <div class="btns"><button type="button" class="btn" data-act="wzCancel">팀 목록으로</button><button class="btn p">다음</button></div></form></section>`;
+  } else if (st === 2) {
+    h += `<section class="card"><h2>팀 비밀번호 정하기</h2><p class="muted" style="margin:0;font-size:15px;line-height:1.7">학생 이름은 이 비밀번호로 잠근 뒤 저장돼요. 운영자도 풀 수 없고, 비밀번호는 서버에 남지 않아요. 코치 선생님께는 나중에 따로 알려 주시면 됩니다.</p>
+ <form data-form="createTeam" style="display:flex;flex-direction:column;gap:10px"><input type="hidden" name="name" value="${esc(w.name)}"><input type="hidden" name="level" value="${esc(w.level)}">
+ <label class="f">팀 비밀번호 (8자 이상)<input type="password" name="pass" required minlength="8" autocomplete="new-password"></label>
+ <label class="f">팀 비밀번호 한 번 더<input type="password" name="pass2" required minlength="8" autocomplete="new-password"></label>
+ <div class="ok">다음 단계에서 비밀번호를 잊었을 때 쓰는 복구 코드를 드려요.</div>
+ <div class="btns"><button type="button" class="btn" data-act="wzPrev">이전</button><button class="btn p">팀 만들기</button></div></form></section>`;
+  } else if (st === 4) {
+    h += `<section class="card"><h2>선수 명단 넣기</h2><p class="muted" style="margin:0;font-size:15px;line-height:1.7">한 명씩 넣거나, 아래 칸에 여러 줄을 한 번에 붙여 넣으세요. 이름은 이 기기에서 잠근 뒤 저장돼요. 지금 다 못 넣어도 나중에 "선수 명단"에서 더 넣을 수 있어요.</p>
+ <form data-form="bulk" style="display:flex;flex-direction:column;gap:8px"><label class="f">한 번에 넣기 (한 줄에 한 명: 이름 학년 등번호, 투수면 끝에 "투수")<textarea name="lines" placeholder="김하준 6 10 투수&#10;이서우 6 7&#10;박도윤 5 12 투수"></textarea></label><button class="btn">붙여 넣은 명단 추가</button></form></section>
+ ${V.roster()}${wzNav(4, { noPrev: true })}`;
+  } else if (st === 5) {
+    h += `<section class="card"><p class="muted" style="margin:0;font-size:15px;line-height:1.7">투구 수에 따라 며칠 쉬어야 하는지 정하는 표예요. 홈 화면의 "오늘 등판 가능한 투수"가 이 표로 계산돼요. 올해 협회 규정을 확인해서 고친 뒤 "기준 확인함"을 눌러 주세요. 지금 확인이 어려우면 넘어가도 돼요.</p></section>
+ ${rulesCard()}${wzNav(5)}`;
+  } else if (st === 6) {
+    h += `<section class="card"><h2>코치 선생님 초대</h2><p class="muted" style="margin:0;font-size:15px;line-height:1.7">함께 기록할 코치 선생님이 있으면 안내 문구를 복사해 보내 주세요. 팀 비밀번호는 문구에 들어가지 않으니 따로 알려 주세요. 혼자 쓰시면 넘어가도 됩니다.</p>
+ <div class="board"><div class="muted">코치 초대 코드</div><div class="hrow"><span class="num" style="font-size:30px;letter-spacing:2px;color:var(--amb)">${esc(TEAM.inviteCode || '')}</span><button type="button" class="btn s" data-act="copyInvite" style="background:transparent;color:#fff;border-color:rgba(255,255,255,.5)">안내 문구 복사</button></div></div></section>${wzNav(6)}`;
+  } else if (st === 7) {
+    h += `<section class="card"><h2>학부모 공지판</h2><p class="muted" style="margin:0;font-size:15px;line-height:1.7">학부모님은 로그인 없이 이 주소나 QR로 공지를 봐요. 학부모 단톡방에 한 번만 올려 두면 됩니다. 공지는 "학부모 공지" 메뉴에서 써요.</p>
+ <div class="muted" style="word-break:break-all">${esc(noticeUrl())}</div>
+ <div class="btns"><button type="button" class="btn" data-act="copyNoticeUrl">주소 복사</button><button type="button" class="btn" data-act="noticeQR">QR 만들기</button></div><div id="qrbox" style="max-width:220px"></div>
+ <div class="warn">주소와 QR은 우리 팀 학부모님께만 보내 주세요. 공지에는 학생 이름을 적지 마세요.</div></section>${wzNav(7)}`;
+  } else {
+    const pc = S.players.length, ok = CFG().rulesOk;
+    h += `<section class="card"><h2>준비 끝!</h2><div class="list">
+ <div><span class="t15">팀</span><span>${esc(S.team.name)} · ${LV().label}</span></div>
+ <div><span class="t15">선수 명단</span>${pill(pc + '명', pc ? 'g' : 'c')}</div>
+ <div><span class="t15">투구 수 기준</span>${pill(ok ? '확인함' : '예시값 (설정에서 확인)', ok ? 'g' : 'c')}</div>
+ <div><span class="t15">복구 코드</span>${pill('보관함', 'g')}</div></div>
+ <p class="muted" style="margin:0;font-size:15px;line-height:1.7">이제 "경기"에서 첫 경기를 만들고 라인업을 짜 보세요. 이 도우미는 설정에서 다시 볼 수 있어요.</p>
+ <button type="button" class="btn p" data-act="wzFinish">더그아웃! 시작하기</button><button type="button" class="btn" data-act="wzPrev">이전</button></section>`;
+  }
+  return gateWrap(h);
+};
+Object.assign(A, {
+  wzStart: () => { ui.wz = { step: 1, level: '초' }; ui.screen = 'wizard'; render(); },
+  wzCancel: () => { ui.wz = null; ui.screen = 'teams'; render(); },
+  wzPrev: () => { const w = ui.wz; if (!w) return; if (w.step === 2) w.step = 1; else if (w.step > 4) w.step--; render(); window.scrollTo(0, 0); },
+  wzNext: () => { const w = ui.wz; if (!w) return; w.step = Math.min(8, w.step + 1); render(); window.scrollTo(0, 0); },
+  wzFinish: async () => {
+    ui.wz = null; ui.confirm = null;
+    try { if (isOwner()) { await store.updateTeam(teamId, { setupDone: true }); TEAM.setupDone = true; } } catch (e) { }
+    ui.screen = 'app'; go('home'); toast('준비 끝! 필요한 건 언제든 설정에서 바꿀 수 있어요');
+  },
+  wzAgain: () => { ui.wz = { step: 4 }; ui.screen = 'wizard'; render(); window.scrollTo(0, 0); }
+});
+Object.assign(F, {
+  wz1: fd => { ui.wz.name = fd.get('name').trim(); ui.wz.level = fd.get('level') || '초'; if (!ui.wz.name) return; ui.wz.step = 2; render(); },
+  bulk: fd => {
+    const lines = String(fd.get('lines') || '').split(/\n/).map(x => x.trim()).filter(Boolean); let n = 0;
+    for (const ln of lines) {
+      const tok = ln.split(/[\s,\t]+/).filter(Boolean); if (!tok.length) continue;
+      const name = tok[0]; const nums = tok.slice(1).filter(t => /^\d+$/.test(t)).map(Number);
+      const pitcher = /투수|(^|\s)P($|\s)/i.test(ln.slice(name.length));
+      let grade = nums.find(x => LV().grades.includes(x)); const gi = nums.indexOf(grade); if (grade == null) grade = LV().grades[LV().grades.length - 1];
+      const rest = nums.filter((x, i) => i !== gi); const no = rest.length ? String(rest[0]) : '';
+      S.players.push({ id: uid(), name, grade, no, pos: pitcher ? 'P' : '', pitcher }); n++;
+    }
+    if (!n) { toast('넣을 줄이 없어요'); return; }
+    save(); render(); toast(n + '명을 추가했어요');
+  }
+});
+
 /* ---------- 설정 화면 (온라인 판) ---------- */
 V.settings = function () {
   if (!ui.members) { ui.members = []; loadMembers(); }
@@ -765,10 +850,7 @@ V.settings = function () {
  <section class="card"><h2>팀</h2><form data-form="setTeam" class="btns" style="align-items:flex-end"><label class="f" style="flex:2">팀 이름<input type="text" name="name" value="${esc(S.team.name)}" required maxlength="40"></label><button class="btn p">저장</button></form>
  <div class="f">학교급 ${own ? '' : '(감독만 바꿀 수 있어요)'}</div><div class="chips">${Object.entries(LEVELS).map(([k, v]) => `<button type="button" class="chip ${S.team.level === k ? 'on' : ''}" data-act="level" data-l="${k}" ${own ? '' : 'disabled'}>${v.label}</button>`).join('')}</div>
  <p class="muted" style="margin:0">학교급에 따라 학년 범위(${LV().grades[0]}~${LV().grades[LV().grades.length - 1]}학년), 기본 이닝(${LV().innings}회), 투구 수 기준표가 바뀌어요.</p></section>
- <section class="card"><h2>투구 수 휴식 기준 · ${LV().label}</h2>${CFG().rulesOk ? '<div class="ok">감독님이 확인한 기준으로 계산하고 있어요.</div>' : '<div class="warn">아래 숫자는 예시예요. 올해 협회 규정을 확인해서 고친 뒤 "기준 확인함"을 눌러 주세요.</div>'}
- <div class="list">${rs.map((r, i) => `<div><span class="t15">${r.max == null ? '그 이상' : '~ <input type="number" min="1" aria-label="구간 ' + (i + 1) + ' 최대 투구 수" data-chg="rule" data-i="' + i + '" data-k="max" value="' + esc(r.max) + '" style="width:80px;display:inline-block;min-height:38px"> 구까지'}</span><span>휴식 <input type="number" min="0" aria-label="구간 ${i + 1} 휴식일" data-chg="rule" data-i="${i}" data-k="days" value="${esc(r.days)}" style="width:70px;display:inline-block;min-height:38px"> 일</span></div>`).join('')}</div>
- <label class="f">하루 최대 투구 수<input type="number" min="1" data-chg="dayMax" value="${esc(CFG().dayMax)}"></label>
- <button type="button" class="btn ${CFG().rulesOk ? '' : 'p'}" data-act="rulesOk">${CFG().rulesOk ? '기준 다시 예시 상태로 표시' : '기준 확인함'}</button></section>
+ ${rulesCard()}
  <section class="card"><h2>백업</h2><p class="muted" style="margin:0;line-height:1.7">기록은 온라인에 암호화돼 저장돼요. 백업 파일은 학생 이름이 풀린 채로 저장되니 안전한 곳에 두세요. html 판(0.1.0) 백업 파일도 불러올 수 있어요.</p>
  <div class="btns"><button type="button" class="btn p" data-act="export">백업 파일 내려받기</button><button type="button" class="btn" data-act="import">백업 파일 불러오기</button></div></section>
  </div><div style="display:flex;flex-direction:column;gap:12px">
@@ -781,6 +863,7 @@ V.settings = function () {
  <section class="card"><h2>학생 정보 보호</h2><p class="muted" style="margin:0;line-height:1.7">학생 이름·등번호·학년, 학업 메모, 결석 사유, 상대 팀 메모는 이 기기에서 팀 비밀번호로 잠근 뒤 저장해요. 같은 이름도 저장할 때마다 다른 암호문이 되고 길이도 일정하게 채워서, 서버에서는 운영자도 알아볼 수 없어요.</p>
  ${own ? `<form data-form="changePass" class="grid2"><label class="f" style="grid-column:span 2">지금 팀 비밀번호<input type="password" name="cur" required autocomplete="current-password"></label><label class="f">새 비밀번호<input type="password" name="n1" required minlength="8" autocomplete="new-password"></label><label class="f">한 번 더<input type="password" name="n2" required minlength="8" autocomplete="new-password"></label><button class="btn" style="grid-column:span 2">팀 비밀번호 바꾸기</button></form>
  <form data-form="newRecovery" class="btns" style="align-items:flex-end"><label class="f" style="flex:2">팀 비밀번호<input type="password" name="cur" required autocomplete="current-password"></label><button class="btn">복구 코드 새로 만들기</button></form>` : '<p class="muted" style="margin:0">비밀번호 바꾸기와 복구 코드는 감독이 관리해요.</p>'}
+ ${own ? '<button type="button" class="btn" data-act="wzAgain">첫 설정 도우미 다시 보기</button>' : ''}
  <div class="btns"><button type="button" class="btn" data-act="lockDevice">이 기기에서 비밀번호 잊기</button><button type="button" class="btn" data-act="switchTeam">다른 팀 열기</button></div>
  ${store.mode === 'firebase' ? '<button type="button" class="btn" data-act="signOut">로그아웃</button>' : ''}</section>
  ${own ? '<section class="card"><h2>팀 지우기</h2><button type="button" class="btn d" data-act="delTeam">팀과 모든 기록 지우기</button></section>' : ''}
@@ -854,7 +937,7 @@ async function startDemoTeam() {
   const PASS = 'demo-dugout-1234';
   if (!ts.length) {
     const key = await newTeamKey();
-    const id = await store.createTeam({ name: '햇살초 야구부', level: '초', settings: defSettings(), crypto: await wrapKey(key, PASS), recovery: await wrapKey(key, normRecovery(newRecoveryCode())), check: { v: 0 } });
+    const id = await store.createTeam({ name: '햇살초 야구부', level: '초', setupDone: true, settings: defSettings(), crypto: await wrapKey(key, PASS), recovery: await wrapKey(key, normRecovery(newRecoveryCode())), check: { v: 0 } });
     teamId = id; await store.updateTeam(id, { check: await seal(key, { ok: 'dugout' }, team_id_check()) });
     TEAM = await store.getTeam(id); KEYC = key;
     const d = demo(); S = blank(); S.team = { name: TEAM.name, level: '초', settings: defSettings() }; synced = { team: teamShape() };
