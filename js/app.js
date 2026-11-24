@@ -599,11 +599,20 @@ G_.login = () => gateWrap(`<section class="card"><h2>로그인</h2><p class="mut
  <button type="button" class="btn p" data-act="signIn">구글로 로그인</button><button type="button" class="btn" data-act="startDemo">로그인 없이 체험하기</button></section>`);
 G_.teams = () => {
   const ts = ui.teams || [];
+  if (!ts.length) {
+    return gateWrap(`<section class="card"><div class="hrow"><h2 style="font-size:20px">처음 오셨네요</h2>${store.mode === 'firebase' ? `<span class="muted">${esc(USER.email)} <button type="button" class="btn s" data-act="signOut">로그아웃</button></span>` : ''}</div>
+ <p class="muted" style="margin:0;font-size:15px">어떤 선생님이신가요?</p></section>
+ <button type="button" class="rolebtn" data-act="wzStart"><b>감독이에요</b><span>새 팀을 만들어요. 첫 설정 도우미가 차례로 안내해요.</span></button>
+ <button type="button" class="rolebtn" data-act="showJoin"><b>코치예요</b><span>감독님께 받은 초대 코드로 팀에 들어가요.</span></button>`);
+  }
   return gateWrap(`<section class="card"><div class="hrow"><h2>내 팀</h2>${store.mode === 'firebase' ? `<span class="muted">${esc(USER.email)} <button type="button" class="btn s" data-act="signOut">로그아웃</button></span>` : ''}</div>
  <div class="list">${ts.map(t => `<div><div><div class="t15">${esc(t.name)}</div><div class="muted">${esc((LEVELS[t.level] || {}).label || '')} · ${t.role === 'owner' ? '감독' : '코치'}</div></div><button type="button" class="btn s p" data-act="openTeam" data-id="${t.id}">열기</button></div>`).join('') || '<div class="empty">아직 팀이 없어요. 새 팀을 만들거나 초대 코드로 들어오세요.</div>'}</div></section>
  <section class="card"><h2>새 팀 만들기 (감독)</h2><p class="muted" style="margin:0;font-size:15px;line-height:1.7">첫 설정 도우미가 팀 만들기부터 선수 명단, 코치 초대, 학부모 공지판까지 차례로 안내해 드려요. 5분이면 끝나요.</p><button type="button" class="btn p" data-act="wzStart">첫 설정 도우미로 팀 만들기</button></section>
  <section class="card"><h2>초대 코드로 들어가기 (코치)</h2><form data-form="join" class="btns" style="align-items:flex-end"><label class="f" style="flex:2">초대 코드<input type="text" name="code" required placeholder="8자리" maxlength="12" style="text-transform:uppercase"></label><button class="btn p">들어가기</button></form></section>`);
 };
+G_.join = () => gateWrap(`<section class="card"><h2>초대 코드로 들어가기</h2><p class="muted" style="margin:0;font-size:15px;line-height:1.7">감독님께 받은 8자리 초대 코드를 넣어 주세요. 들어간 뒤 팀 비밀번호로 학생 명단을 열어요.</p>
+ <form data-form="join" style="display:flex;flex-direction:column;gap:10px"><label class="f">초대 코드<input type="text" name="code" required placeholder="8자리" maxlength="12" style="text-transform:uppercase" autocomplete="off"></label>
+ <div class="btns"><button type="button" class="btn" data-act="wzCancel">이전</button><button class="btn p">들어가기</button></div></form></section>`);
 G_.recovery = () => gateWrap((ui.wz ? wzBar(3) : '') + `<section class="card"><h2>복구 코드를 꼭 적어 두세요</h2>
  <p class="muted" style="margin:0;font-size:15px;line-height:1.7">팀 비밀번호를 잊었을 때 이 코드로만 학생 명단을 열 수 있어요. 지금 한 번만 보여 드려요. 종이에 적거나 사진을 찍어 안전한 곳에 두세요.</p>
  <div class="board" style="align-items:center"><span class="num" style="font-size:30px;letter-spacing:2px;color:var(--amb)" id="rcode">${esc(ui.rcode)}</span></div>
@@ -724,7 +733,7 @@ Object.assign(F, {
   join: async fd => {
     ui.screen = 'loading'; render();
     try { const id = await store.joinByCode(fd.get('code')); ui.teams = await store.myTeams(); await openTeam(id); }
-    catch (e) { toast(e.message || '들어가지 못했어요'); ui.screen = 'teams'; render(); }
+    catch (e) { toast(e.message || '들어가지 못했어요'); ui.screen = (ui.teams && ui.teams.length) ? 'teams' : 'join'; render(); }
   },
   unlock: async fd => {
     const v = fd.get('pass'); let key = null;
@@ -814,6 +823,7 @@ G_.wizard = () => {
   return gateWrap(h);
 };
 Object.assign(A, {
+  showJoin: () => { ui.screen = 'join'; render(); const i = document.querySelector('[data-form=join] [name=code]'); if (i) i.focus(); },
   wzStart: () => { ui.wz = { step: 1, level: '초' }; ui.screen = 'wizard'; render(); },
   wzCancel: () => { ui.wz = null; ui.screen = 'teams'; render(); },
   wzPrev: () => { const w = ui.wz; if (!w) return; if (w.step === 2) w.step = 1; else if (w.step > 4) w.step--; render(); window.scrollTo(0, 0); },
