@@ -6,6 +6,12 @@
 <meta name="theme-color" content="#123D27">
 <title>더그아웃! Dugout</title>
 <link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="더그아웃!">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
 <style>
 :root{--g:#1F5C3A;--dg:#123D27;--amb:#F2C14E;--c:#B23A2B;--ink:#15202E;--mu:#5B6470;--ln:#DDD6C2;--bg:#EFEBDD;--gt:#E1EEDF;--ct:#F5E2D9;--lt:#CFE3D5;
@@ -144,6 +150,8 @@ body.bare main{padding:0}
 .rolebtn span{font-size:14px;color:var(--mu);line-height:1.6}
 .rolebtn:hover{border-color:var(--g);transform:translateY(-2px)}
 .rolebtn:focus-visible{outline:3px solid var(--amb);outline-offset:2px}
+.install{display:flex;gap:12px;align-items:center}
+.install img{width:52px;height:52px;border-radius:12px;flex:0 0 auto}
 .wzskip{align-self:center;background:none!important;border:none!important;color:var(--mu);text-decoration:underline}
 </style>
 </head>
@@ -161,5 +169,6 @@ body.bare main{padding:0}
 <input type="file" id="importFile" accept=".json,application/json" hidden>
 <noscript>자바스크립트를 켜야 쓸 수 있어요.</noscript>
 <script type="module" src="js/app.js"></script>
+<script>if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost')){addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));}</script>
 </body>
 </html>

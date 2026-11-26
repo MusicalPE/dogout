@@ -1,0 +1,17 @@
+{
+  "name": "더그아웃! Dugout",
+  "short_name": "더그아웃!",
+  "description": "야구부 감독을 위한 팀 운영 앱",
+  "lang": "ko",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#EFEBDD",
+  "theme_color": "#123D27",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

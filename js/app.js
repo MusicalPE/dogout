@@ -2,7 +2,7 @@
 import { newTeamKey, wrapKey, unwrapKey, seal, open, newRecoveryCode, looksLikeRecovery, normRecovery, rememberKey, recallKey, forgetKey } from './crypto.js';
 import { localStore, firebaseStore, configured, COLS } from './store.js';
 
-const VERSION = '1.0.0';
+const VERSION = '1.1.0';
 const LEVELS = {
   '초': { label: '초등학교', grades: [1, 2, 3, 4, 5, 6], innings: 6 },
   '중': { label: '중학교', grades: [1, 2, 3], innings: 7 },
@@ -379,7 +379,7 @@ V.ana=function(){
 /* 더보기 */
 V.more=function(){
  const it=[['schedule','대회·훈련 일정','출석인정 결석 날짜 정리'],['log','훈련 일지','날짜별 훈련 내용과 참석'],['study','학업 체크','학생별 학업 확인'],['gear','장비 관리','대여·반납·교체 시기'],['notice','학부모 공지','공지 쓰고 카톡용 문구 복사'],['roster','선수 명단',S.players.length+'명'],['settings','설정·백업','휴식 기준, 백업 파일']];
- return `<section class="card"><div class="list">${it.map(([k,t,s])=>`<div><div><div class="t15">${t}</div><div class="muted">${esc(s)}</div></div><button type="button" class="btn s" data-act="go" data-p="${k}">열기</button></div>`).join('')}</div></section>`;
+ return `<section class="card"><div class="list">${it.map(([k,t,s])=>`<div><div><div class="t15">${t}</div><div class="muted">${esc(s)}</div></div><button type="button" class="btn s" data-act="go" data-p="${k}">열기</button></div>`).join('')}</div></section>`+installCard(true);
 };
 
 /* 일정 */
@@ -635,14 +635,14 @@ function banner() {
 const G_ = {};
 G_.loading = () => gateWrap('<section class="card"><div class="empty">불러오는 중…</div></section>');
 G_.login = () => gateWrap(`<section class="card"><h2>로그인</h2><p class="muted" style="margin:0;font-size:15px;line-height:1.7">구글 계정으로 로그인해 팀을 만들거나, 감독님께 받은 초대 코드로 들어오세요. 학생 이름은 감독님 기기에서 암호화한 뒤 저장돼서, 운영자도 볼 수 없어요.</p>
- <button type="button" class="btn p" data-act="signIn">구글로 로그인</button><button type="button" class="btn" data-act="startDemo">로그인 없이 체험하기</button></section>`);
+ <button type="button" class="btn p" data-act="signIn">구글로 로그인</button><button type="button" class="btn" data-act="startDemo">로그인 없이 체험하기</button></section>` + installCard(true));
 G_.teams = () => {
   const ts = ui.teams || [];
   if (!ts.length) {
     return gateWrap(`<section class="card"><div class="hrow"><h2 style="font-size:20px">처음 오셨네요</h2>${store.mode === 'firebase' ? `<span class="muted">${esc(USER.email)} <button type="button" class="btn s" data-act="signOut">로그아웃</button></span>` : ''}</div>
  <p class="muted" style="margin:0;font-size:15px">어떤 선생님이신가요?</p></section>
  <button type="button" class="rolebtn" data-act="wzStart"><b>감독이에요</b><span>새 팀을 만들어요. 첫 설정 도우미가 차례로 안내해요.</span></button>
- <button type="button" class="rolebtn" data-act="showJoin"><b>코치예요</b><span>감독님께 받은 초대 코드로 팀에 들어가요.</span></button>`);
+ <button type="button" class="rolebtn" data-act="showJoin"><b>코치예요</b><span>감독님께 받은 초대 코드로 팀에 들어가요.</span></button>` + installCard(true));
   }
   return gateWrap(`<section class="card"><div class="hrow"><h2>내 팀</h2>${store.mode === 'firebase' ? `<span class="muted">${esc(USER.email)} <button type="button" class="btn s" data-act="signOut">로그아웃</button></span>` : ''}</div>
  <div class="list">${ts.map(t => `<div><div><div class="t15">${esc(t.name)}</div><div class="muted">${esc((LEVELS[t.level] || {}).label || '')} · ${t.role === 'owner' ? '감독' : '코치'}</div></div><button type="button" class="btn s p" data-act="openTeam" data-id="${t.id}">열기</button></div>`).join('') || '<div class="empty">아직 팀이 없어요. 새 팀을 만들거나 초대 코드로 들어오세요.</div>'}</div></section>
@@ -809,6 +809,22 @@ function rulesCard() {
  <button type="button" class="btn ${CFG().rulesOk ? '' : 'p'}" data-act="rulesOk">${CFG().rulesOk ? '기준 다시 예시 상태로 표시' : '기준 확인함'}</button></section>`;
 }
 
+/* ================= 앱으로 설치 ================= */
+let installEvt = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; if (ui.screen !== 'app' || ['settings', 'more'].includes(ui.page)) render(); });
+window.addEventListener('appinstalled', () => { installEvt = null; toast('앱으로 설치했어요. 홈 화면에서 더그아웃!을 눌러 여세요'); render(); });
+function isStandalone() { return (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true; }
+function isIOS() { return /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); }
+function installCard(compact) {
+  if (isStandalone()) return compact ? '' : `<section class="card"><h2>앱으로 설치</h2><div class="ok">지금 설치된 앱으로 쓰고 있어요.</div></section>`;
+  let how;
+  if (installEvt) how = `<button type="button" class="btn p" data-act="install">앱으로 설치하기</button>`;
+  else if (isIOS()) how = `<p class="muted" style="margin:0;line-height:1.7">사파리 아래쪽 <b>공유 단추</b>(네모에 위 화살표)를 누른 뒤 <b>홈 화면에 추가</b>를 누르세요.</p>`;
+  else if (/SamsungBrowser/i.test(navigator.userAgent)) how = `<p class="muted" style="margin:0;line-height:1.7">아래쪽 <b>메뉴(≡)</b> → <b>현재 페이지 추가</b> → <b>홈 화면</b>을 누르세요.</p>`;
+  else how = `<p class="muted" style="margin:0;line-height:1.7">브라우저 오른쪽 위 <b>메뉴(⋮)</b>에서 <b>앱 설치</b> 또는 <b>홈 화면에 추가</b>를 누르세요. PC 크롬·엣지는 주소창 오른쪽의 설치 단추를 눌러도 돼요.</p>`;
+  return `<section class="card"><div class="install"><img src="icons/icon-192.png" alt=""><div><h2 style="margin:0 0 2px">더그아웃! 앱으로 설치</h2><div class="muted">홈 화면이나 바탕화면에서 바로 열려요. 주소창 없이 넓게 보여요.</div></div></div>${how}</section>`;
+}
+
 /* ================= 첫 설정 도우미 ================= */
 const WZ = ['팀 정보', '팀 비밀번호', '복구 코드', '선수 명단', '투구 수 기준', '코치 초대', '학부모 공지판'];
 function wzBar(step) {
@@ -896,6 +912,7 @@ V.settings = function () {
   if (!ui.members) { ui.members = []; loadMembers(); }
   const rs = CFG().rules, own = isOwner();
   return `<div class="cols2"><div style="display:flex;flex-direction:column;gap:12px">
+ ${installCard()}
  <section class="card"><h2>팀</h2><form data-form="setTeam" class="btns" style="align-items:flex-end"><label class="f" style="flex:2">팀 이름<input type="text" name="name" value="${esc(S.team.name)}" required maxlength="40"></label><button class="btn p">저장</button></form>
  <div class="f">학교급 ${own ? '' : '(감독만 바꿀 수 있어요)'}</div><div class="chips">${Object.entries(LEVELS).map(([k, v]) => `<button type="button" class="chip ${S.team.level === k ? 'on' : ''}" data-act="level" data-l="${k}" ${own ? '' : 'disabled'}>${v.label}</button>`).join('')}</div>
  <p class="muted" style="margin:0">학교급에 따라 학년 범위(${LV().grades[0]}~${LV().grades[LV().grades.length - 1]}학년), 기본 이닝(${LV().innings}회), 투구 수 기준표가 바뀌어요.</p></section>
