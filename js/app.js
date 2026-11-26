@@ -175,7 +175,7 @@ const MORE_PAGES=['more','schedule','log','study','gear','notice','roster','sett
 function title(){const m={more:'더보기',game:'경기'};return m[ui.page]||(PAGES.find(p=>p[0]===ui.page)||['','더그아웃!'])[1];}
 function renderNav(){
  const side=document.getElementById('side');
- side.innerHTML=`<div class="team">${esc(S.team.name||'우리 팀')}</div><div class="logo">더그아웃<em>!</em></div><div class="gap">경기·기록</div>`+
+ side.innerHTML=`<div class="team">${esc(S.team.name||'우리 팀')}</div><a href="#" class="logo" data-act="go" data-p="home" title="홈으로" aria-label="더그아웃! 홈으로">더그아웃<em>!</em></a><div class="gap">경기·기록</div>`+
   PAGES.map(([k,t],i)=>(i===4?'<div class="gap">팀 운영</div>':i===9?'<div class="gap">팀 관리</div>':'')+`<button type="button" data-act="go" data-p="${k}" class="${(ui.page===k||(k==='games'&&ui.page==='game'))?'on':''}">${t}</button>`).join('');
  const cur=MORE_PAGES.includes(ui.page)?'more':(ui.page==='game'?'games':ui.page);
  document.getElementById('bnav').innerHTML=BNAV.map(([k,t])=>`<button type="button" data-act="go" data-p="${k}" class="${cur===k?'on':''}">${t}</button>`).join('');
