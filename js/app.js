@@ -411,15 +411,43 @@ function makeLetter(){
 /* 훈련 일지 */
 V.log=function(){
  const logs=[...S.logs].sort((a,b)=>b.date.localeCompare(a.date));
+ logRangeInit();
+ const sel=logSelected();
  return `<div class="cols2"><section class="card"><h2>오늘 훈련 일지</h2><form data-form="log" style="display:flex;flex-direction:column;gap:10px">
  <label class="f">날짜<input type="date" name="date" value="${today()}" required></label>
  <label class="f">훈련 내용<textarea name="body" required placeholder="캐치볼 20분&#10;내야 펑고&#10;티 배팅 3세트"></textarea></label>
  <div class="f">참석 (빠진 선수만 끄세요)</div><div class="chips">${sortedPlayers().map(p=>`<label class="chip on" style="display:inline-flex;align-items:center;gap:6px"><input type="checkbox" name="att" value="${p.id}" checked data-chg="chipToggle">${esc(p.name)}</label>`).join('')||'<span class="empty">선수 명단을 먼저 넣어 주세요</span>'}</div>
  <label class="f">결석 사유 메모<input type="text" name="note" placeholder="예: 정민재 병결"></label>
  <button class="btn p">일지 저장</button></form></section>
- <section class="card"><div class="hrow"><h2>지난 일지 ${logs.length}개</h2><button type="button" class="btn s" data-act="logCsv" ${logs.length?'':'disabled'}>보고서용 파일(CSV) 내려받기</button></div><div class="list">${logs.map(l=>`<div style="align-items:flex-start"><div style="flex:1"><div class="t15">${md(l.date)} ${pill('참석 '+(l.att||[]).length+'/'+S.players.length,'g')}</div><div class="muted" style="white-space:pre-line;font-size:14px;color:var(--ink);margin-top:4px">${esc(l.body)}</div>${l.note?`<div class="muted">${esc(l.note)}</div>`:''}</div><button type="button" class="btn s d" data-act="delLog" data-id="${l.id}">삭제</button></div>`).join('')||'<div class="empty">아직 일지가 없어요</div>'}</div></section></div>`;
+ <div style="display:flex;flex-direction:column;gap:12px">
+ <section class="card"><h2>일지 출력</h2>
+ <div class="chips"><button type="button" class="chip" data-act="logPreset" data-k="month">이번 달</button><button type="button" class="chip" data-act="logPreset" data-k="prev">지난달</button><button type="button" class="chip" data-act="logPreset" data-k="week">최근 7일</button><button type="button" class="chip" data-act="logPreset" data-k="all">전체</button></div>
+ <div class="grid2"><label class="f">시작일<input type="date" data-chg="logFrom" value="${esc(ui.logFrom)}"></label><label class="f">끝일<input type="date" data-chg="logTo" value="${esc(ui.logTo)}"></label></div>
+ <label class="f" style="flex-direction:row;align-items:center;gap:8px;font-size:15px;color:var(--ink)"><input type="checkbox" data-chg="logNames" ${ui.logNames?'checked':''} style="width:20px;height:20px"> 참석·결석 선수 이름 넣기</label>
+ <div class="muted">고른 일지 <b style="color:var(--ink)">${sel.length}개</b> · 아래 목록에서 하나씩 빼거나 넣을 수 있어요</div>
+ <div class="btns"><button type="button" class="btn p" data-act="logPrint" ${sel.length?'':'disabled'}>고른 일지 인쇄·PDF</button><button type="button" class="btn" data-act="logCsv" ${logs.length?'':'disabled'}>CSV 내려받기</button></div></section>
+ <section class="card"><h2>지난 일지 ${logs.length}개</h2><div class="list">${logs.map(l=>`<div style="align-items:flex-start"><input type="checkbox" aria-label="${md(l.date)} 일지 출력에 넣기" data-chg="logPick" data-id="${l.id}" ${ui.logSel.has(l.id)?'checked':''} style="width:22px;height:22px;margin-top:2px;flex:0 0 auto"><div style="flex:1"><div class="t15">${md(l.date)} ${pill('참석 '+(l.att||[]).length+'/'+S.players.length,'g')}</div><div class="muted" style="white-space:pre-line;font-size:14px;color:var(--ink);margin-top:4px">${esc(l.body)}</div>${l.note?`<div class="muted">${esc(l.note)}</div>`:''}</div><button type="button" class="btn s d" data-act="delLog" data-id="${l.id}">삭제</button></div>`).join('')||'<div class="empty">아직 일지가 없어요</div>'}</div></section></div></div>`;
 };
-
+function ymd(d){d=new Date(d);d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10);}
+function logRangeInit(){
+ if(ui.logFrom==null){const t=today();ui.logFrom=t.slice(0,8)+'01';ui.logTo=t;ui.logNames=true;ui.logSel=null;}
+ if(!ui.logSel) logSelectRange();
+}
+function logSelectRange(){ui.logSel=new Set(S.logs.filter(l=>(!ui.logFrom||l.date>=ui.logFrom)&&(!ui.logTo||l.date<=ui.logTo)).map(l=>l.id));}
+function logSelected(){return S.logs.filter(l=>ui.logSel&&ui.logSel.has(l.id)).sort((a,b)=>a.date.localeCompare(b.date)||String(a.id).localeCompare(String(b.id)));}
+function logPrintHtml(){
+ const ls=logSelected();const all=sortedPlayers();
+ const from=ls.length?ls[0].date:'',to=ls.length?ls[ls.length-1].date:'';
+ const fmt=d=>d?d.replace(/-/g,'. ')+'.':'';
+ const rows=ls.map(l=>{const att=(l.att||[]);const absent=all.filter(p=>!att.includes(p.id));
+  const attCell=`<b>${att.length}/${all.length}명</b>`+(ui.logNames?`<div class="pn">${att.map(pname).map(esc).join(', ')}</div>`:'');
+  const absCell=(ui.logNames&&absent.length?`<div>${absent.map(p=>esc(p.name)).join(', ')}</div>`:(absent.length?`${absent.length}명`:'-'))+(l.note?`<div class="pn">${esc(l.note)}</div>`:'');
+  return `<tr><td class="d">${md(l.date)}</td><td class="b">${esc(l.body)}</td><td>${attCell}</td><td>${absCell}</td></tr>`;}).join('');
+ return `<div class="logprint"><h2 style="margin:0 0 4px">${esc(S.team.name||'')} 훈련 일지</h2>
+ <p style="margin:0 0 12px">기간: ${fmt(from)} ~ ${fmt(to)} · 일지 ${ls.length}개 · 출력일 ${fmt(today())}</p>
+ <table><thead><tr><th style="width:13%">날짜</th><th>훈련 내용</th><th style="width:22%">참석</th><th style="width:20%">결석·메모</th></tr></thead><tbody>${rows}</tbody></table>
+ <p style="margin-top:24px;text-align:right">감독 ______________ (서명)</p></div>`;
+}
 /* 학업 */
 V.study=function(){
  const sp=sortedPlayers();const st=k=>sp.filter(p=>(S.study[p.id]||{}).status===k).length;
@@ -498,6 +526,13 @@ const A={
  letter:()=>{ui.letter=makeLetter();render();},
  copy:el=>copyText(document.getElementById(el.dataset.src).value),
  delLog:el=>{S.logs=S.logs.filter(l=>l.id!==el.dataset.id);save();render();},
+ logPreset:el=>{const t=today(),d=new Date(t+'T00:00:00'),k=el.dataset.k;
+  if(k==='month'){ui.logFrom=t.slice(0,8)+'01';ui.logTo=t;}
+  else if(k==='prev'){const f=new Date(d.getFullYear(),d.getMonth()-1,1),e=new Date(d.getFullYear(),d.getMonth(),0);ui.logFrom=ymd(f);ui.logTo=ymd(e);}
+  else if(k==='week'){ui.logFrom=addDays(t,-6);ui.logTo=t;}
+  else {const ds=S.logs.map(l=>l.date).sort();ui.logFrom=ds[0]||'';ui.logTo=ds[ds.length-1]||'';}
+  logSelectRange();render();},
+ logPrint:()=>{if(!logSelected().length){toast('출력할 일지를 골라 주세요');return;}document.getElementById('print').innerHTML=logPrintHtml();try{window.print();}catch(e){toast('이 화면에서는 인쇄가 막혀 있어요');}},
  logCsv:()=>{const q=s=>'"'+String(s??'').replace(/"/g,'""')+'"';const rows=[['날짜','훈련 내용','참석 인원','참석 선수','메모']].concat([...S.logs].sort((a,b)=>a.date.localeCompare(b.date)).map(l=>[l.date,l.body,(l.att||[]).length,(l.att||[]).map(pname).join(' '),l.note||'']));download('훈련일지.csv','﻿'+rows.map(r=>r.map(q).join(',')).join('\r\n'),'text/csv');},
  gearStatus:el=>{const g=S.gear.find(x=>x.id===el.dataset.id);g.status=g.status==='교체 필요'?'정상':'교체 필요';save();render();},
  delGear:el=>{S.gear=S.gear.filter(x=>x.id!==el.dataset.id);save();render();},
@@ -524,7 +559,7 @@ const F={
   S.games.push(g);save();ui.gameId=g.id;ui.gtab='lineup';go('game');toast('경기를 만들었어요. 라인업부터 넣어 보세요');},
  gameEdit:fd=>{const g=curG();['date','opp','kind','time','place','meet'].forEach(k=>g[k]=fd.get(k));g.innings=Number(fd.get('innings'));save();render();toast('저장했어요');},
  event:fd=>{const start=fd.get('start'),end=fd.get('end')||start;const e={id:uid(),title:fd.get('title').trim(),start,end:end<start?start:end,kind:fd.get('kind'),place:fd.get('place').trim(),att:!!fd.get('att'),who:S.players.map(p=>p.id)};e.days=e.att?weekdays(e.start,e.end):0;S.events.push(e);save();render();toast('일정을 추가했어요');},
- log:fd=>{S.logs.push({id:uid(),date:fd.get('date'),body:fd.get('body').trim(),att:fd.getAll('att'),note:fd.get('note').trim()});save();render();toast('일지를 저장했어요');},
+ log:fd=>{const l={id:uid(),date:fd.get('date'),body:fd.get('body').trim(),att:fd.getAll('att'),note:fd.get('note').trim()};S.logs.push(l);if(ui.logSel&&(!ui.logFrom||l.date>=ui.logFrom)&&(!ui.logTo||l.date<=ui.logTo))ui.logSel.add(l.id);save();render();toast('일지를 저장했어요');},
  gear:fd=>{S.gear.push({id:uid(),name:fd.get('name').trim(),qty:Number(fd.get('qty'))||0,status:fd.get('status'),note:fd.get('note').trim(),rentals:[]});save();render();},
  rent:fd=>{const g=S.gear.find(x=>x.id===fd.get('gid'));if(!g)return;g.rentals=g.rentals||[];g.rentals.push({id:uid(),who:fd.get('who'),due:fd.get('due')});save();render();toast('대여 기록했어요');},
  notice:fd=>{S.notices.push({id:uid(),date:today(),title:fd.get('title').trim(),body:fd.get('body').trim(),items:fd.get('items').trim()});save();render();toast('공지를 저장했어요');}
@@ -541,6 +576,10 @@ const C={
  ana:el=>{ui.ana=el.value;render();},
  who:el=>{const e=S.events.find(x=>x.id===el.dataset.e);e.who=e.who||[];if(el.checked){if(!e.who.includes(el.dataset.id))e.who.push(el.dataset.id);}else e.who=e.who.filter(x=>x!==el.dataset.id);save();render();},
  edays:el=>{S.events.find(x=>x.id===el.dataset.e).days=Number(el.value)||0;save();render();},
+ logFrom:el=>{ui.logFrom=el.value;if(ui.logTo&&ui.logFrom>ui.logTo)ui.logTo=ui.logFrom;logSelectRange();render();},
+ logTo:el=>{ui.logTo=el.value;if(ui.logFrom&&ui.logTo<ui.logFrom)ui.logFrom=ui.logTo;logSelectRange();render();},
+ logNames:el=>{ui.logNames=el.checked;},
+ logPick:el=>{if(el.checked)ui.logSel.add(el.dataset.id);else ui.logSel.delete(el.dataset.id);render();},
  chipToggle:el=>{el.closest('label').classList.toggle('on',el.checked);},
  study:el=>{const x=S.study[el.dataset.id]=S.study[el.dataset.id]||{};x[el.dataset.k]=el.value;x.date=today();save();if(el.dataset.k==='status')render();},
  rule:el=>{const r=CFG().rules[Number(el.dataset.i)];r[el.dataset.k]=el.value===''?0:Number(el.value);save();},
